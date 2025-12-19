@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dashboard Gerencial SSSRO 2025</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body { font-family: 'Outfit', sans-serif; background-color: #f8fafc; color: #0f172a; overflow-x: hidden; }
+        
+        /* Loader */
+        #loader { position: fixed; inset: 0; z-index: 9999; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
+        .pulse-ring { width: 60px; height: 60px; border-radius: 50%; background: #991b1b; animation: pulse-animation 2s infinite; }
+        @keyframes pulse-animation { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(153, 27, 27, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(153, 27, 27, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(153, 27, 27, 0); } }
+
+        /* Scrollbar Personalizado */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Pestañas */
+        .tab-pill { cursor: pointer; padding: 0.6rem 1.2rem; border-radius: 999px; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease; border: 1px solid transparent; }
+        .tab-pill.active { background-color: #1e293b; color: white; shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .tab-pill:not(.active) { background-color: white; color: #64748b; border-color: #e2e8f0; }
+        .tab-pill:not(.active):hover { background-color: #f8fafc; color: #334155; border-color: #cbd5e1; }
+
+        /* Animación de Entrada */
+        .fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+        /* Tabla Móvil (Card View) */
+        @media (max-width: 640px) {
+            .mobile-cards thead { display: none; }
+            .mobile-cards tr { display: block; margin-bottom: 1rem; background: white; border-radius: 1rem; padding: 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+            .mobile-cards td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px dashed #f1f5f9; }
+            .mobile-cards td:last-child { border-bottom: none; }
+            .mobile-cards td::before { content: attr(data-label); font-weight: 700; color: #94a3b8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        }
+    </style>
+</head>
+<body class="pb-16">
+
+    <div id="loader">
+        <div class="pulse-ring flex items-center justify-center mb-4">
+            <i class="ph ph-heartbeat text-3xl text-white"></i>
+        </div>
+        <p class="text-sm font-bold text-slate-500 tracking-widest uppercase animate-pulse">Cargando Datos...</p>
+    </div>
+
+    <nav class="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-red-900 to-red-700 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-900/20">
+                    <i class="ph ph-shield-check text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-extrabold text-slate-800 leading-none">SEDES LA PAZ</h1>
+                    <p class="text-[10px] font-bold text-red-700 uppercase tracking-widest mt-1">SSSRO 2025 - CARRERA DE MEDICINA</p>
+                </div>
+            </div>
+            <button onclick="descargarExcel()" class="group bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md transition-all flex items-center gap-2 transform active:scale-95">
+                <i class="ph ph-file-xls text-xl group-hover:scale-110 transition-transform"></i> 
+                <span class="hidden sm:inline">Descargar Excel</span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 mt-8 space-y-8">
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 fade-in-up">
+            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-slate-100 relative overflow-hidden">
+                <div class="absolute -right-6 -top-6 w-24 h-24 bg-slate-50 rounded-full"></div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest relative z-10">Total Plazas</p>
+                <div class="flex items-baseline gap-1 mt-2 relative z-10">
+                    <h3 id="txtTotal" class="text-3xl font-black text-slate-800">...</h3>
+                    <span class="text-xs text-slate-400 font-medium">Items</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border-l-4 border-red-700 relative">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-bold text-red-700 uppercase tracking-widest">Asignados</p>
+                        <h3 id="txtOcupados" class="text-3xl font-black text-red-800 mt-2">...</h3>
+                    </div>
+                    <div class="bg-red-50 p-2 rounded-lg text-red-700"><i class="ph ph-user-check text-xl"></i></div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border-l-4 border-emerald-500 relative">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-bold text-emerald-600 uppercase tracking-widest">Vacantes</p>
+                        <h3 id="txtVacantes" class="text-3xl font-black text-emerald-600 mt-2">...</h3>
+                    </div>
+                    <div class="bg-emerald-50 p-2 rounded-lg text-emerald-600"><i class="ph ph-squares-four text-xl"></i></div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-xl flex flex-col justify-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-tr from-red-600/30 to-slate-900"></div>
+                <div class="relative z-10">
+                    <div class="flex justify-between items-end mb-3">
+                        <span class="text-xs font-bold uppercase text-slate-400">Avance Sorteo</span>
+                        <span id="txtPct" class="text-2xl font-bold text-white">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-2">
+                        <div id="barProgreso" class="bg-green-400 h-2 rounded-full shadow-[0_0_10px_rgba(74,222,128,0.5)] transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in-up" style="animation-delay: 150ms;">
+            
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 lg:col-span-1 flex flex-col justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">Cobertura Global</h3>
+                    <p class="text-xs text-slate-400 mt-1">Porcentaje de ocupación actual</p>
+                </div>
+                <div id="chartGauge" class="w-full h-64 mt-4"></div>
+            </div>
+
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 lg:col-span-2">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">Distribución por Red de Salud</h3>
+                    <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border border-slate-200">Dinámico</span>
+                </div>
+                <div id="chartRedesContainer" class="w-full" style="min-height: 350px;"></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden fade-in-up" style="animation-delay: 300ms;">
+            
+            <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
+                
+                <div class="flex bg-slate-100 p-1 rounded-full w-full md:w-auto">
+                    <button onclick="setTab('asignados')" id="btn-asignados" class="tab-pill active flex-1 md:flex-none">
+                        <i class="ph ph-users inline-block mr-1"></i> Asignados
+                    </button>
+                    <button onclick="setTab('vacantes')" id="btn-vacantes" class="tab-pill flex-1 md:flex-none">
+                        <i class="ph ph-empty inline-block mr-1"></i> Vacantes
+                    </button>
+                </div>
+                
+                <div class="relative w-full md:w-80 group">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-3 text-slate-400 group-focus-within:text-red-700 transition-colors"></i>
+                    <input type="text" id="search" onkeyup="filtrar()" placeholder="Buscar por nombre, CI, hospital..." 
+                        class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-900/20 focus:border-red-900 outline-none transition-all text-sm font-medium shadow-sm">
+                </div>
+            </div>
+
+            <div id="view-asignados" class="p-0 sm:p-2 bg-slate-50/50 overflow-y-auto max-h-[600px]">
+                <table class="w-full text-left border-collapse mobile-cards">
+                    <thead class="bg-white text-xs font-bold text-slate-500 uppercase sticky top-0 z-10 shadow-sm">
+                        <tr>
+                            <th class="p-4 pl-6">Funcionario</th>
+                            <th class="p-4">Documento ID</th>
+                            <th class="p-4">Red de Salud</th>
+                            <th class="p-4 pr-6 text-right">Establecimiento</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bodyAsignados" class="text-sm text-slate-700 divide-y divide-slate-100 bg-white"></tbody>
+                </table>
+            </div>
+
+            <div id="view-vacantes" class="hidden p-0 sm:p-2 bg-slate-50/50 overflow-y-auto max-h-[600px]">
+                <table class="w-full text-left border-collapse mobile-cards">
+                    <thead class="bg-white text-xs font-bold text-slate-500 uppercase sticky top-0 z-10 shadow-sm">
+                        <tr>
+                            <th class="p-4 pl-6">Red de Salud</th>
+                            <th class="p-4">Establecimiento</th>
+                            <th class="p-4 pr-6 text-right">Estado Actual</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bodyVacantes" class="text-sm text-slate-700 divide-y divide-slate-100 bg-white"></tbody>
+                </table>
+            </div>
+
+            <div class="bg-slate-50 border-t border-slate-100 p-3 text-center text-xs text-slate-400 font-medium">
+                Se encontraron <span id="count" class="text-slate-900 font-bold">0</span> registros
+            </div>
+        </div>
+
+        <div class="text-center pb-8 pt-4 opacity-60">
+            <div class="flex items-center justify-center gap-2 mb-2">
+                <i class="ph ph-shield-check text-slate-400"></i>
+                <span class="text-xs font-bold text-slate-500 tracking-widest uppercase">Unidad SUISD</span>
+            </div>
+            <p class="text-[10px] text-slate-400">&copy; 2025 SEDES La Paz. Todos los derechos reservados.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // ⚠️ CONFIGURACIÓN: PEGAR LINK AQUI
+        // ==========================================
+        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQBRCZZzvXR7pjdVGPm_gFip-0zE24ySN7l5SN2HZH0QlT8iy-EhwiCUFIOU2z00JWG8z7Oj-ufoqd8/pub?output=csv"; 
+
+        let allData = [], asignados = [], vacantes = [];
+        let currentTab = 'asignados';
+
+        // INICIALIZACIÓN
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Simular carga mínima para que se vea la animación
+            setTimeout(async () => {
+                if(!CSV_URL.includes('google')) { 
+                    alert("⚠️ ERROR: No has pegado el link del CSV en el código HTML.");
+                    document.getElementById('loader').style.display = 'none';
+                    return; 
+                }
+
+                try {
+                    const res = await fetch(CSV_URL);
+                    const txt = await res.text();
+                    const rows = parseCSV(txt);
+                    
+                    // Mapeo de columnas (0:CI, 1:NOM, 2:APE, 3:RED, 4:HOSPITAL)
+                    allData = rows.slice(1).map(r => ({
+                        ci: clean(r[0]),
+                        nombres: clean(r[1]),
+                        apellidos: clean(r[2]),
+                        red: clean(r[3]),
+                        establecimiento: clean(r[4])
+                    })).filter(d => d.red !== "");
+
+                    renderDashboard();
+                } catch(e) { 
+                    console.error(e); 
+                    alert("Error al conectar con Google Sheets"); 
+                } finally {
+                    // Ocultar loader
+                    document.getElementById('loader').style.opacity = '0';
+                    setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+                }
+            }, 800);
+        });
+
+        // UTILIDADES
+        const clean = (str) => (str || "").replace(/['"]+/g, '').trim();
+        
+        function parseCSV(str) {
+            const arr = []; let quote=false; let col=0, row=0;
+            for (let c=0;c<str.length;c++) {
+                let cc=str[c], nc=str[c+1];
+                arr[row]=arr[row]||[]; arr[row][col]=arr[row][col]||'';
+                if (cc=='"' && quote && nc=='"') { arr[row][col]+=cc; ++c; }
+                else if (cc=='"') { quote=!quote; }
+                else if (cc==',' && !quote) { ++col; }
+                else if (cc=='\r' && nc=='\n' && !quote) { ++row; col=0; ++c; }
+                else if (cc=='\n' && !quote) { ++row; col=0; }
+                else { arr[row][col]+=cc; }
+            }
+            return arr;
+        }
+
+        function renderDashboard() {
+            asignados = allData.filter(d => d.ci !== "");
+            vacantes = allData.filter(d => d.ci === "");
+
+            // 1. KPIs
+            const total = allData.length;
+            const pct = total > 0 ? Math.round((asignados.length / total) * 100) : 0;
+            
+            document.getElementById('txtTotal').innerText = total;
+            document.getElementById('txtOcupados').innerText = asignados.length;
+            document.getElementById('txtVacantes').innerText = vacantes.length;
+            document.getElementById('txtPct').innerText = pct + "%";
+            document.getElementById('barProgreso').style.width = pct + "%";
+
+            // 2. Gráficos
+            renderCharts(pct);
+
+            // 3. Tablas
+            filtrar();
+        }
+
+        // --- GRÁFICOS DINÁMICOS ---
+        function renderCharts(pct) {
+            Highcharts.setOptions({ credits: { enabled: false }, chart: { style: { fontFamily: 'Outfit' } } });
+
+            // GAUGE (SEMI-CIRCULO)
+            Highcharts.chart('chartGauge', {
+                chart: { type: 'pie', margin: [0,0,0,0], height: '100%' },
+                title: { text: pct + '%', align: 'center', verticalAlign: 'middle', y: 20, style: { fontSize: '42px', fontWeight: '800', color: '#0f172a' } },
+                plotOptions: {
+                    pie: {
+                        startAngle: -90, endAngle: 90, center: ['50%', '80%'], size: '140%', innerSize: '75%',
+                        dataLabels: { enabled: false },
+                        borderWidth: 0
+                    }
+                },
+                series: [{
+                    name: 'Cobertura',
+                    data: [
+                        { name: 'Ocupado', y: pct, color: '#991b1b' },
+                        { name: 'Libre', y: 100 - pct, color: '#f1f5f9' }
+                    ]
+                }]
+            });
+
+            // BARRAS INTELIGENTES (Altura Variable)
+            const redes = {};
+            allData.forEach(d => {
+                if(!redes[d.red]) redes[d.red] = { ok: 0, vac: 0 };
+                if(d.ci!=="") redes[d.red].ok++; else redes[d.red].vac++;
+            });
+            const cats = Object.keys(redes).sort();
+            
+            // CÁLCULO DE ALTURA: Mínimo 300px, o 40px por cada barra
+            const h = Math.max(300, cats.length * 40);
+            document.getElementById('chartRedesContainer').style.height = h + 'px';
+
+            Highcharts.chart('chartRedesContainer', {
+                chart: { type: 'bar', marginLeft: 150 },
+                title: { text: null },
+                xAxis: { 
+                    categories: cats, 
+                    labels: { style: { fontSize: '12px', fontWeight: '600', color: '#64748b' } },
+                    lineWidth: 0
+                },
+                yAxis: { title: { text: null }, gridLineColor: '#f1f5f9' },
+                plotOptions: { 
+                    series: { stacking: 'normal', borderRadius: 3, pointWidth: 18, borderLineWidth: 0 } 
+                },
+                legend: { reversed: true, verticalAlign: 'top' },
+                tooltip: { shared: true, borderRadius: 8 },
+                series: [
+                    { name: 'Disponibles', data: cats.map(c => redes[c].vac), color: '#10b981' },
+                    { name: 'Asignados', data: cats.map(c => redes[c].ok), color: '#991b1b' }
+                ]
+            });
+        }
+
+        // --- LÓGICA DE TABLA ---
+        function setTab(t) {
+            currentTab = t;
+            document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-'+t).classList.add('active');
+            
+            const vA = document.getElementById('view-asignados');
+            const vV = document.getElementById('view-vacantes');
+            
+            if(t === 'asignados') { vA.classList.remove('hidden'); vV.classList.add('hidden'); }
+            else { vA.classList.add('hidden'); vV.classList.remove('hidden'); }
+            
+            filtrar();
+        }
+
+        function filtrar() {
+            const txt = document.getElementById('search').value.toLowerCase();
+            const src = currentTab === 'asignados' ? asignados : vacantes;
+            const res = src.filter(d => Object.values(d).join(' ').toLowerCase().includes(txt));
+            
+            document.getElementById('count').innerText = res.length;
+            renderHTML(res);
+        }
+
+        function renderHTML(data) {
+            const tbody = document.getElementById(currentTab === 'asignados' ? 'bodyAsignados' : 'bodyVacantes');
+            let h = '';
+            
+            if(data.length === 0) { tbody.innerHTML = '<div class="p-8 text-center text-slate-400 italic">No hay datos para mostrar</div>'; return; }
+
+            data.forEach(d => {
+                if(currentTab === 'asignados') {
+                    h += `
+                    <tr class="group hover:bg-slate-50 transition-colors">
+                        <td class="p-4 pl-6" data-label="Funcionario">
+                            <div>
+                                <div class="font-bold text-slate-800 text-[15px]">${d.nombres} ${d.apellidos}</div>
+                                <div class="text-[11px] text-slate-400 font-medium group-hover:text-red-700 transition-colors uppercase tracking-wide">Médico / Interno</div>
+                            </div>
+                        </td>
+                        <td class="p-4" data-label="Documento">
+                            <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-mono font-bold">${d.ci}</span>
+                        </td>
+                        <td class="p-4 text-slate-600 text-sm" data-label="Red">${d.red}</td>
+                        <td class="p-4 pr-6 text-right sm:text-left" data-label="Destino">
+                            <span class="font-bold text-red-800 text-sm">${d.establecimiento}</span>
+                        </td>
+                    </tr>`;
+                } else {
+                    h += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4 pl-6 text-slate-600 font-medium text-sm" data-label="Red">${d.red}</td>
+                        <td class="p-4 font-bold text-slate-800" data-label="Hospital">${d.establecimiento}</td>
+                        <td class="p-4 pr-6 text-right" data-label="Estado">
+                            <span class="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Disponible
+                            </span>
+                        </td>
+                    </tr>`;
+                }
+            });
+            tbody.innerHTML = h;
+        }
+
+        // --- EXPORTAR EXCEL ---
+        function descargarExcel() {
+            const wb = XLSX.utils.book_new();
+            const date = new Date().toLocaleDateString();
+
+            const createSheet = (title, headers, rows) => {
+                const data = [[title], ["REPORTE OFICIAL: " + date], [""], headers, ...rows];
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                if(!ws['!merges']) ws['!merges'] = [];
+                ws['!merges'].push({s:{r:0,c:0},e:{r:0,c:headers.length-1}});
+                ws['!cols'] = headers.map(()=>({wch:25}));
+                ws['!autofilter'] = { ref: XLSX.utils.encode_range({s:{r:3,c:0},e:{r:data.length-1,c:headers.length-1}}) };
+                return ws;
+            };
+
+            const ra = asignados.map(d => [d.ci, d.nombres, d.apellidos, d.red, d.establecimiento]);
+            XLSX.utils.book_append_sheet(wb, createSheet("ASIGNADOS SUISD 2025", ["CI","NOMBRES","APELLIDOS","RED","HOSPITAL"], ra), "Asignados");
+
+            const rv = vacantes.map(d => [d.red, d.establecimiento, "LIBRE"]);
+            XLSX.utils.book_append_sheet(wb, createSheet("VACANTES SUISD 2025", ["RED","HOSPITAL","ESTADO"], rv), "Vacantes");
+
+            XLSX.writeFile(wb, "Reporte_Gerencial_SUISD_2025.xlsx");
+        }
+    </script>
+</body>
+</html>
